@@ -1,9 +1,11 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 train: ../train/images
 val: ../valid/images
 test: ../test/images
 
 nc: 1
-names: ['Excavator']
+names: ["Excavator"]
 
 roboflow:
   workspace: builderlyticsanalysis
