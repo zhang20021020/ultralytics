@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['Excavator']
+
+roboflow:
+  workspace: builderlyticsanalysis
+  project: excavator-q7ulo
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/builderlyticsanalysis/excavator-q7ulo/dataset/1
