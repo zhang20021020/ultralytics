@@ -1,3 +1,5 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 import tensorrt as trt
 
 onnx_file = r"E:\myRsearch\ultralytics\runs\detect\train4\weights\best.onnx"

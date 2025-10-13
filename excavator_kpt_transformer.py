@@ -1,9 +1,11 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 # excavator_kpt_transformer.py
 import math
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 # -----------------------------
@@ -11,30 +13,30 @@ import torch.nn.functional as F
 # -----------------------------
 def build_geo_features(kpts: torch.Tensor) -> torch.Tensor:
     """
-    输入:  kpts: (B, T, K, 3)  其中最后一维为 (x, y, v)
-    输出:  geo:  (B, T, G)    几何特征，G为特征维数
+    输入:  kpts: (B, T, K, 3)  其中最后一维为 (x, y, v) 输出:  geo:  (B, T, G)    几何特征，G为特征维数.
+
     说明:  下方按你的示意点位做了几种常用几何量：
       - 铲斗尖端(1) / 铲斗-动臂铰点(2) / 动臂中段(3) / 动臂根部(4)
       - 驾驶室参考点(5) / 底盘中心(6) / 左前轮(7) / 右后轮(9)
-    如你的关键点定义不同，请自行调整索引。
+    如你的关键点定义不同，请自行调整索引。.
     """
     # 索引换成 0-based
     idx = {
-        "bucket_tip": 0,   # 点1
-        "bucket_hinge": 1, # 点2
-        "boom_mid": 2,     # 点3
-        "boom_root": 3,    # 点4
-        "cabin": 4,        # 点5
-        "chassis": 5,      # 点6
-        "wheel_l": 6,      # 点7
-        "wheel_r": 8,      # 点9
+        "bucket_tip": 0,  # 点1
+        "bucket_hinge": 1,  # 点2
+        "boom_mid": 2,  # 点3
+        "boom_root": 3,  # 点4
+        "cabin": 4,  # 点5
+        "chassis": 5,  # 点6
+        "wheel_l": 6,  # 点7
+        "wheel_r": 8,  # 点9
     }
 
     x = kpts[..., 0]  # (B, T, K)
     y = kpts[..., 1]  # (B, T, K)
     v = kpts[..., 2]  # (B, T, K)
 
-    def _vec(a: int, b: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _vec(a: int, b: int) -> tuple[torch.Tensor, torch.Tensor]:
         return x[..., b] - x[..., a], y[..., b] - y[..., a]
 
     # 动臂向量: root->mid，mid->hinge，铲斗向量: hinge->tip
@@ -46,9 +48,9 @@ def build_geo_features(kpts: torch.Tensor) -> torch.Tensor:
     def angle(vx, vy):
         return torch.atan2(vy, vx)
 
-    a_rm = angle(vx_rm, vy_rm)      # 根到中段
-    a_mh = angle(vx_mh, vy_mh)      # 中段到铰点
-    a_ht = angle(vx_ht, vy_ht)      # 铰点到铲尖（铲斗角）
+    a_rm = angle(vx_rm, vy_rm)  # 根到中段
+    a_mh = angle(vx_mh, vy_mh)  # 中段到铰点
+    a_ht = angle(vx_ht, vy_ht)  # 铰点到铲尖（铲斗角）
 
     # 段长（做尺度归一化：除以两轮中心距）
     # 轮距近似: 左前轮(7) <-> 右后轮(9) 的距离（如为履带车，可换成两端接触点）
@@ -70,11 +72,7 @@ def build_geo_features(kpts: torch.Tensor) -> torch.Tensor:
     vis_ratio = (v > 0).float().mean(dim=-1)  # (B, T)
 
     # 拼接几何特征
-    geo = torch.stack([
-        a_rm, a_mh, a_ht,
-        len_rm, len_mh, len_ht,
-        rel_h_tip, vis_ratio
-    ], dim=-1)  # (B, T, 8)
+    geo = torch.stack([a_rm, a_mh, a_ht, len_rm, len_mh, len_ht, rel_h_tip, vis_ratio], dim=-1)  # (B, T, 8)
 
     # 角度归一化到 [-1, 1]
     geo[..., 0:3] = geo[..., 0:3] / math.pi
@@ -112,7 +110,7 @@ class ExcavatorKPTTransformer(nn.Module):
         dropout: float = 0.1,
         num_classes: int = 2,
         use_cls_token: bool = True,
-        max_len: int = 1024
+        max_len: int = 1024,
     ):
         super().__init__()
         self.num_keypoints = num_keypoints
@@ -124,18 +122,12 @@ class ExcavatorKPTTransformer(nn.Module):
         frame_in_dim = num_keypoints * base_feat
 
         # 帧内线性投影
-        self.frame_proj = nn.Sequential(
-            nn.LayerNorm(frame_in_dim),
-            nn.Linear(frame_in_dim, d_model)
-        )
+        self.frame_proj = nn.Sequential(nn.LayerNorm(frame_in_dim), nn.Linear(frame_in_dim, d_model))
 
         # 可选几何特征分支
         geo_dim = 8 if use_geo else 0
         if use_geo:
-            self.geo_proj = nn.Sequential(
-                nn.LayerNorm(geo_dim),
-                nn.Linear(geo_dim, d_model)
-            )
+            self.geo_proj = nn.Sequential(nn.LayerNorm(geo_dim), nn.Linear(geo_dim, d_model))
 
         # [CLS] token
         if use_cls_token:
@@ -145,23 +137,23 @@ class ExcavatorKPTTransformer(nn.Module):
         self.pos_enc = LearnablePositionalEncoding(d_model, max_len=max_len)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=nhead,
-            dim_feedforward=dim_feedforward, dropout=dropout,
-            batch_first=True, norm_first=True
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            batch_first=True,
+            norm_first=True,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
         # 分类头
-        self.head = nn.Sequential(
-            nn.LayerNorm(d_model),
-            nn.Linear(d_model, num_classes)
-        )
+        self.head = nn.Sequential(nn.LayerNorm(d_model), nn.Linear(d_model, num_classes))
 
     def forward(self, kpts: torch.Tensor, lengths: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         kpts:    (B, T, K, 3)  -> (x, y, v)  其中 v 可选
         lengths: (B,) 每个样本的有效帧长。若提供，将做 padding mask。
-        返回:    (B, num_classes) logits
+        返回:    (B, num_classes) logits.
         """
         B, T, K, C = kpts.shape
         assert K == self.num_keypoints, "关键点数量不匹配"
@@ -172,19 +164,19 @@ class ExcavatorKPTTransformer(nn.Module):
             C = 2
 
         frame_feat = kpts.reshape(B, T, K * C)  # (B, T, K*C)
-        f_emb = self.frame_proj(frame_feat)     # (B, T, d)
+        f_emb = self.frame_proj(frame_feat)  # (B, T, d)
 
         if self.use_geo:
-            geo = build_geo_features(kpts)         # (B, T, 8)
-            g_emb = self.geo_proj(geo)             # (B, T, d)
-            x = f_emb + g_emb                      # 融合
+            geo = build_geo_features(kpts)  # (B, T, 8)
+            g_emb = self.geo_proj(geo)  # (B, T, d)
+            x = f_emb + g_emb  # 融合
         else:
             x = f_emb
 
         # 可选 [CLS]
         if self.use_cls_token:
             cls = self.cls_token.expand(B, 1, -1)  # (B,1,d)
-            x = torch.cat([cls, x], dim=1)         # (B, T+1, d)
+            x = torch.cat([cls, x], dim=1)  # (B, T+1, d)
 
         # 位置编码
         x = self.pos_enc(x)
@@ -195,7 +187,7 @@ class ExcavatorKPTTransformer(nn.Module):
             pad = x.new_ones((B, x.size(1)), dtype=torch.bool)  # (B, T[+1])
             offset = 1 if self.use_cls_token else 0
             for i, L in enumerate(lengths.tolist()):
-                pad[i, offset:offset+L] = False
+                pad[i, offset : offset + L] = False
             # 其余位置为 True（mask）
             src_key_padding_mask = pad
 

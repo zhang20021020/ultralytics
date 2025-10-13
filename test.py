@@ -1,5 +1,9 @@
-from ultralytics import YOLO
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 import cv2
+
+from ultralytics import YOLO
+
 
 def main():
     # 1. 加载你训练好的模型（改成你自己训练的权重路径）
@@ -18,12 +22,7 @@ def main():
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    out = cv2.VideoWriter(
-        "excavator_detected.mp4",
-        cv2.VideoWriter_fourcc(*"mp4v"),
-        fps,
-        (width, height)
-    )
+    out = cv2.VideoWriter("excavator_detected.mp4", cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
 
     # 5. 循环读取视频帧并推理
     while True:
@@ -50,6 +49,7 @@ def main():
     out.release()
     cv2.destroyAllWindows()
     print("检测完成，结果已保存到 excavator_detected.mp4")
+
 
 if __name__ == "__main__":
     main()
