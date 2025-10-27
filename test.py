@@ -1,3 +1,5 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 # from ultralytics import YOLO
 # import cv2
 #
@@ -54,18 +56,22 @@
 # if __name__ == "__main__":
 #     main()
 # -*- coding: utf-8 -*-
-from ultralytics import YOLO
-import cv2
 import csv
 import os
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
+
+import cv2
+
+from ultralytics import YOLO
+
 
 def format_ts(seconds: float) -> str:
-    """把秒转成 mm:ss.mmm 的字符串"""
+    """把秒转成 mm:ss.mmm 的字符串."""
     ms = int((seconds - int(seconds)) * 1000)
     m = int(seconds) // 60
     s = int(seconds) % 60
     return f"{m:02d}:{s:02d}.{ms:03d}"
+
 
 # 自定义导出目录（建议提前创建）
 SAVE_DIR = r"E:\myRsearch\ultralytics\results"
@@ -78,6 +84,7 @@ VIDEO_OUT = os.path.join(SAVE_DIR, "excavator_detected.mp4")
 # 若目录不存在则创建
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+
 def main():
     # ========= 1) 基本配置 =========
     WEIGHTS = r"E:\myRsearch\ultralytics\runs\detect\train4\weights\best.pt"
@@ -85,7 +92,7 @@ def main():
 
     CONF_THRES = 0.5
     IOU_THRES = 0.45
-    INTERVAL_SEC = 1.0          # 时间区间聚合的粒度（秒）
+    INTERVAL_SEC = 1.0  # 时间区间聚合的粒度（秒）
 
     # ========= 2) 加载模型 =========
     model = YOLO(WEIGHTS)
@@ -103,21 +110,10 @@ def main():
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    out = cv2.VideoWriter(
-        VIDEO_OUT,
-        cv2.VideoWriter_fourcc(*"mp4v"),
-        fps,
-        (width, height)
-    )
-
-
+    out = cv2.VideoWriter(VIDEO_OUT, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
 
     # 帧级明细 CSV 头
-    frame_fields = [
-        "frame_idx", "timestamp_s", "timestamp_str",
-        "cls_id", "cls_name", "conf",
-        "x1", "y1", "x2", "y2"
-    ]
+    frame_fields = ["frame_idx", "timestamp_s", "timestamp_str", "cls_id", "cls_name", "conf", "x1", "y1", "x2", "y2"]
     # 写入头
     with open(frames_csv, "w", newline="", encoding="utf-8") as fcsv:
         writer = csv.DictWriter(fcsv, fieldnames=frame_fields)
@@ -125,8 +121,8 @@ def main():
 
     # 区间聚合：key = 区间起点秒(浮点或四舍五入)，value 里存总数与类别计数
     # 例如：interval_bins[10.0] 代表 [10.0s, 11.0s) 这 1 秒内的统计
-    interval_bins_total = defaultdict(int)      # 每区间总目标数
-    interval_bins_by_cls = defaultdict(Counter) # 每区间按类别计数
+    interval_bins_total = defaultdict(int)  # 每区间总目标数
+    interval_bins_by_cls = defaultdict(Counter)  # 每区间按类别计数
 
     names = model.model.names if hasattr(model, "model") else {}
 
@@ -143,12 +139,7 @@ def main():
         t_str = format_ts(t_sec)
 
         # ========= 5) 推理 =========
-        results = model(
-            frame,
-            conf=CONF_THRES,
-            iou=IOU_THRES,
-            verbose=False
-        )
+        results = model(frame, conf=CONF_THRES, iou=IOU_THRES, verbose=False)
 
         r = results[0]
         boxes = getattr(r, "boxes", None)
@@ -172,15 +163,20 @@ def main():
                     conf = float(confs[i]) if len(confs) > i else 0.0
                     cls_name = names.get(cls_id, str(cls_id))
 
-                    writer.writerow({
-                        "frame_idx": frame_idx,
-                        "timestamp_s": f"{t_sec:.3f}",
-                        "timestamp_str": t_str,
-                        "cls_id": cls_id,
-                        "cls_name": cls_name,
-                        "conf": f"{conf:.3f}",
-                        "x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2),
-                    })
+                    writer.writerow(
+                        {
+                            "frame_idx": frame_idx,
+                            "timestamp_s": f"{t_sec:.3f}",
+                            "timestamp_str": t_str,
+                            "cls_id": cls_id,
+                            "cls_name": cls_name,
+                            "conf": f"{conf:.3f}",
+                            "x1": int(x1),
+                            "y1": int(y1),
+                            "x2": int(x2),
+                            "y2": int(y2),
+                        }
+                    )
 
                     per_frame_count += 1
                     per_frame_class_names.append(cls_name)
@@ -188,8 +184,9 @@ def main():
                     # 在图像上画框和标签
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                     label = f"{cls_name} {conf:.2f}"
-                    cv2.putText(frame, label, (int(x1), max(0, int(y1)-5)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(
+                        frame, label, (int(x1), max(0, int(y1) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2
+                    )
 
         # ========= 6) 区间聚合统计（按 INTERVAL_SEC 分箱）=========
         # 例如 INTERVAL_SEC=1，则 0.0~0.999... 属于 0.0 桶；1.0~1.999... 属于 1.0 桶
@@ -216,7 +213,13 @@ def main():
         all_classes.update(c.keys())
     all_classes = sorted(all_classes)
 
-    interval_fields = ["interval_start_s", "interval_end_s", "interval_start_str", "interval_end_str", "total_count"] + [f"cls_{c}" for c in all_classes]
+    interval_fields = [
+        "interval_start_s",
+        "interval_end_s",
+        "interval_start_str",
+        "interval_end_str",
+        "total_count",
+    ] + [f"cls_{c}" for c in all_classes]
 
     with open(intervals_csv, "w", newline="", encoding="utf-8") as icsv:
         writer = csv.DictWriter(icsv, fieldnames=interval_fields)
@@ -229,7 +232,7 @@ def main():
                 "interval_end_s": f"{end_s:.3f}",
                 "interval_start_str": format_ts(start_s),
                 "interval_end_str": format_ts(end_s),
-                "total_count": interval_bins_total[k]
+                "total_count": interval_bins_total[k],
             }
             cls_counter = interval_bins_by_cls.get(k, Counter())
             for c in all_classes:
@@ -241,7 +244,10 @@ def main():
     out.release()
     cv2.destroyAllWindows()
 
-    print(f"检测完成：\n- 可视化视频：{os.path.abspath(VIDEO_OUT)}\n- 帧级明细：{os.path.abspath(frames_csv)}\n- 区间统计：{os.path.abspath(intervals_csv)}")
+    print(
+        f"检测完成：\n- 可视化视频：{os.path.abspath(VIDEO_OUT)}\n- 帧级明细：{os.path.abspath(frames_csv)}\n- 区间统计：{os.path.abspath(intervals_csv)}"
+    )
+
 
 if __name__ == "__main__":
     main()
