@@ -1,15 +1,20 @@
-import json
-from ultralytics import YOLO
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 import argparse
+import json
+
 import torch
+
+from ultralytics import YOLO
 
 # 避免 cudnn 出现 NOT_SUPPORTED 问题
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
+
 def main(config_path):
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         cfg = json.load(f)
 
     model = YOLO(cfg["model"])
@@ -21,10 +26,11 @@ def main(config_path):
         imgsz=cfg.get("imgsz", 640),
         batch=cfg.get("batch", 2),
         workers=cfg.get("workers", 0),
-        device=cfg.get("device", 0)
+        device=cfg.get("device", 0),
     )
 
     print(f"✅ 训练完成，结果保存于: {results.save_dir}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
